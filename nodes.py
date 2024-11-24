@@ -444,7 +444,7 @@ class MochiTextEncode:
     def encode(self, clip, text):
         max_tokens = 256  # Set the maximum number of tokens
         tokens = clip.tokenize(text)
-        print(f"Token count: {len(tokens["t5xxl"][0])}")
+        print(f"Token count: {len(tokens['t5xxl'][0])}")
         # Check if token count exceeds max_tokens
         if len(tokens["t5xxl"][0]) > max_tokens:
             print(f"Notice: The input text length exceeds the maximum token limit of {max_tokens}. It has been automatically truncated.")
