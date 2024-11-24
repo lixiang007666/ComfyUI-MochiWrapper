@@ -422,55 +422,38 @@ class MochiVAEEncoderLoader:
 class MochiTextEncode:
     @classmethod
     def INPUT_TYPES(s):
-        return {"required": {
-            "clip": ("CLIP",),
-            "prompt": ("STRING", {"default": "", "multiline": True} ),
-            },
-            "optional": {
-                "strength": ("FLOAT", {"default": 1.0, "min": 0.0, "max": 10.0, "step": 0.01}),
-                "force_offload": ("BOOLEAN", {"default": True}),
+        return {
+            "required": {
+                "text": ("STRING", {
+                    "multiline": True,
+                    "dynamicPrompts": True,
+                    "tooltip": "The text to be encoded."
+                }),
+                "clip": ("CLIP", {
+                    "tooltip": "The CLIP model used for encoding the text."
+                })
             }
         }
+    RETURN_TYPES = ("CONDITIONING",)
+    OUTPUT_TOOLTIPS = ("A conditioning containing the embedded text used to guide the diffusion model.",)
+    FUNCTION = "encode"
 
-    RETURN_TYPES = ("CONDITIONING", "CLIP",)
-    RETURN_NAMES = ("conditioning", "clip", )
-    FUNCTION = "process"
-    CATEGORY = "MochiWrapper"
+    CATEGORY = "conditioning"
+    DESCRIPTION = "Encodes a text prompt using a CLIP model into an embedding that can be used to guide the diffusion model towards generating specific images."
 
-    def process(self, clip, prompt, strength=1.0, force_offload=True):
-        max_tokens = 256
-        load_device = mm.text_encoder_device()
-        offload_device = mm.text_encoder_offload_device()
-
-        try:
-            clip.tokenizer.t5xxl.pad_to_max_length = True
-            clip.tokenizer.t5xxl.max_length = max_tokens
-            clip.cond_stage_model.t5xxl.return_attention_masks = True
-            clip.cond_stage_model.t5xxl.enable_attention_masks = True
-            clip.cond_stage_model.t5_attention_mask = True
-            clip.cond_stage_model.to(load_device)
-            tokens = clip.tokenizer.t5xxl.tokenize_with_weights(prompt, return_word_ids=True)
-            try:
-                embeds, _, attention_mask = clip.cond_stage_model.t5xxl.encode_token_weights(tokens)
-            except:
-                NotImplementedError("Failed to get attention mask from T5, is your ComfyUI up to date?")
-        except:
-            clip.cond_stage_model.to(offload_device)
-            tokens = clip.tokenizer.tokenize_with_weights(prompt, return_word_ids=True)
-            embeds, _, attention_mask = clip.cond_stage_model.encode_token_weights(tokens)
+    def encode(self, clip, text):
+        max_tokens = 256  # Set the maximum number of tokens
+        tokens = clip.tokenize(text)
         
-        if embeds.shape[1] > 256:
-            raise ValueError(f"Prompt is too long, max tokens supported is {max_tokens} or less, got {embeds.shape[1]}")
-        embeds *= strength
-        if force_offload:
-            clip.cond_stage_model.to(offload_device)
-            mm.soft_empty_cache()
-
-        t5_embeds = {
-            "embeds": embeds,
-            "attention_mask": attention_mask["attention_mask"].bool(),
-        }
-        return (t5_embeds, clip,)
+        # Check if token count exceeds max_tokens
+        if tokens.shape[1] > max_tokens:
+            print(f"Notice: The input text length exceeds the maximum token limit of {max_tokens}. It has been automatically truncated.")
+            # Truncate tokens
+            tokens = tokens[:, :max_tokens]
+        
+        output = clip.encode_from_tokens(tokens, return_pooled=True, return_dict=True)
+        cond = output.pop("cond")
+        return ([[cond, output]], )
     
 #region FasterCache
 class MochiFasterCache:
