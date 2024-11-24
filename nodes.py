@@ -443,15 +443,16 @@ class MochiTextEncode:
 
     def encode(self, clip, text):
         max_tokens = 256  # Set the maximum number of tokens
+
+        # Truncate the text to a maximum number of words or characters
+        # Note: Token count and word count may differ due to tokenization specifics
+        words = text.split()
+        if len(words) > max_tokens:
+            print(f"Notice: The input text exceeds the maximum token limit of {max_tokens}. It has been automatically truncated.")
+            words = words[:max_tokens]
+            text = ' '.join(words)
+
         tokens = clip.tokenize(text)
-        
-        # Check if token count exceeds max_tokens
-        if len(tokens["input_ids"][0]) > max_tokens:
-            print(f"Notice: The input text length exceeds the maximum token limit of {max_tokens}. It has been automatically truncated.")
-            # Truncate tokens
-            for key in tokens:
-                tokens[key] = tokens[key][:, :max_tokens]
-        
         output = clip.encode_from_tokens(tokens, return_pooled=True, return_dict=True)
         cond = output.pop("cond")
         return ([[cond, output]], )
