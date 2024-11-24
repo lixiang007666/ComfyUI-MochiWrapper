@@ -437,7 +437,7 @@ class MochiTextEncode:
     RETURN_TYPES = ("CONDITIONING",)
     OUTPUT_TOOLTIPS = ("A conditioning containing the embedded text used to guide the diffusion model.",)
     FUNCTION = "encode"
-    
+
     CATEGORY = "MochiWrapper"
     DESCRIPTION = "Encodes a text prompt using a CLIP model into an embedding that can be used to guide the diffusion model towards generating specific images."
 
@@ -446,10 +446,11 @@ class MochiTextEncode:
         tokens = clip.tokenize(text)
         
         # Check if token count exceeds max_tokens
-        if tokens.shape[1] > max_tokens:
+        if len(tokens["input_ids"][0]) > max_tokens:
             print(f"Notice: The input text length exceeds the maximum token limit of {max_tokens}. It has been automatically truncated.")
             # Truncate tokens
-            tokens = tokens[:, :max_tokens]
+            for key in tokens:
+                tokens[key] = tokens[key][:, :max_tokens]
         
         output = clip.encode_from_tokens(tokens, return_pooled=True, return_dict=True)
         cond = output.pop("cond")
