@@ -444,17 +444,31 @@ class MochiTextEncode:
     def encode(self, clip, text):
         max_tokens = 256  # Set the maximum number of tokens
         tokens = clip.tokenize(text)
-        print(f"Token count: {len(tokens['t5xxl'][0])}")
-        # Check if token count exceeds max_tokens
-        if len(tokens["t5xxl"][0]) > max_tokens:
-            print(f"Notice: The input text length exceeds the maximum token limit of {max_tokens}. It has been automatically truncated.")
-            # Truncate tokens
-            for key in tokens:
-                tokens[key] = tokens[key][:, :max_tokens]
         
+        # Check if 't5xxl' exists in tokens to avoid KeyError
+        if 't5xxl' in tokens:
+            token_count = len(tokens['t5xxl'][0])
+            print(f"Token count: {token_count}")
+
+            # Check if token count exceeds max_tokens
+            if token_count > max_tokens:
+                print(f"Notice: The input text length exceeds the maximum token limit of {max_tokens}. It has been automatically truncated.")
+                # Truncate tokens
+                for key in tokens:
+                    # Check if tokens[key] is a list of lists
+                    if isinstance(tokens[key][0], list):
+                        tokens[key] = [sublist[:max_tokens] for sublist in tokens[key]]
+                    else:
+                        tokens[key] = tokens[key][:max_tokens]
+        else:
+            print("Key 't5xxl' not found in tokens.")
+            # Handle the case where 't5xxl' is missing
+
         output = clip.encode_from_tokens(tokens, return_pooled=True, return_dict=True)
         cond = output.pop("cond")
         return ([[cond, output]], )
+
+
     
 #region FasterCache
 class MochiFasterCache:
