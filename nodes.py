@@ -437,9 +437,8 @@ class MochiTextEncode:
     RETURN_TYPES = ("CONDITIONING",)
     OUTPUT_TOOLTIPS = ("A conditioning containing the embedded text used to guide the diffusion model.",)
     FUNCTION = "encode"
+    
     CATEGORY = "MochiWrapper"
-
-    CATEGORY = "conditioning"
     DESCRIPTION = "Encodes a text prompt using a CLIP model into an embedding that can be used to guide the diffusion model towards generating specific images."
 
     def encode(self, clip, text):
